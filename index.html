@@ -158,6 +158,10 @@
   .pop-ht .label{color:var(--gold-ink);margin-bottom:1px}
   .pop-ht h3{font-family:var(--font-display);font-weight:600;font-size:16px;margin:0;line-height:1.15;color:var(--ink)}
   .pop-body{padding:11px 15px 14px}
+  .leg{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-ui);font-size:11.5px;color:var(--ink-faint);margin-bottom:9px}
+  .leg i{color:var(--teal)}
+  .leg.drive i{color:var(--gold-ink)}
+  .card .leg{margin:0 0 10px}
   .pop-dur{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-ui);font-size:12px;
     color:var(--ink-soft);background:var(--paper-2);border:1px solid var(--line);border-radius:999px;
     padding:3px 10px;margin-bottom:9px}
@@ -283,7 +287,10 @@ const T = {
     navigate:"Navigate", park:"Park", startPoint:"Starting point",
     homeName:"Lichtenberg (start)",
     homeDesc:"You set off from here. The East Side Gallery (stop 1) is just to the west.",
-    streets:"Streets", satellite:"Satellite", toggleTo:"PT"
+    streets:"Streets", satellite:"Satellite", toggleTo:"PT",
+    leg:{ start:"By car from Lichtenberg (start)",
+          drive:p=>`By car from ${p}`,
+          walk:(m,p)=>`${m} min walk from ${p}` }
   },
   pt:{
     htmlLang:"pt-BR",
@@ -306,7 +313,10 @@ const T = {
     navigate:"Navegar", park:"Estacionar", startPoint:"Ponto de partida",
     homeName:"Lichtenberg (saída)",
     homeDesc:"Você sai daqui. A East Side Gallery (parada 1) fica logo a oeste.",
-    streets:"Ruas", satellite:"Satélite", toggleTo:"EN"
+    streets:"Ruas", satellite:"Satélite", toggleTo:"EN",
+    leg:{ start:"De carro desde Lichtenberg (saída)",
+          drive:p=>`De carro desde ${p}`,
+          walk:(m,p)=>`${m} min a pé desde ${p}` }
   }
 };
 
@@ -455,7 +465,23 @@ const STOPS = [
 /* ===== helpers ===== */
 const appleNav  = (lat,lng) => `https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`;
 const appleQ    = q => `https://maps.apple.com/?daddr=${encodeURIComponent(q)}&dirflg=d`;
-const esc = s => s;
+
+function haversine(aLat,aLng,bLat,bLng){
+  const R=6371000, r=Math.PI/180;
+  const dLa=(bLat-aLat)*r, dLo=(bLng-aLng)*r;
+  const h=Math.sin(dLa/2)**2+Math.cos(aLat*r)*Math.cos(bLat*r)*Math.sin(dLo/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+// walking (or, for the long hops, driving) leg from the previous stop
+function legHTML(lang,i){
+  const L=T[lang].leg;
+  if(i===0) return `<div class="leg drive"><i class="fa-solid fa-car"></i> ${L.start}</div>`;
+  const p=STOPS[i-1], c=STOPS[i];
+  const mins=Math.round(haversine(p.lat,p.lng,c.lat,c.lng)*1.3/80);
+  return mins<=18
+    ? `<div class="leg"><i class="fa-solid fa-person-walking"></i> ${L.walk(mins,p.name[lang])}</div>`
+    : `<div class="leg drive"><i class="fa-solid fa-car"></i> ${L.drive(p.name[lang])}</div>`;
+}
 
 /* ===== map (built once) ===== */
 const map = L.map("map",{scrollWheelZoom:true});
@@ -503,7 +529,7 @@ function render(lang){
       <div class="pop-body"><p class="desc">${t.homeDesc}</p></div>`,{maxWidth:300})
    .addTo(markers);
 
-  STOPS.forEach(s=>{
+  STOPS.forEach((s,i)=>{
     const num = s.n==="+" ? '<i class="fa-solid fa-plus"></i>' : s.n;
     const icon = L.divIcon({className:"",html:`<div class="stamp stamp-${s.key}"><span>${num}</span></div>`,iconSize:[38,38],iconAnchor:[19,19],popupAnchor:[0,-18]});
     const parkBtn = s.parkNav ? `<a class="btn btn-park" href="${appleQ(s.parkNav)}" target="_blank" rel="noopener"><i class="fa-solid fa-square-parking"></i> ${t.park}</a>` : "";
@@ -512,6 +538,7 @@ function render(lang){
       `<div class="pop-head"><div class="pop-ico a-${s.key}"><i class="fa-solid ${s.icon}"></i></div>
          <div class="pop-ht"><div class="label">${head} · ${S(s.area)}</div><h3>${S(s.name)}</h3></div></div>
        <div class="pop-body">
+         ${legHTML(lang,i)}
          <div class="pop-dur"><i class="fa-regular fa-clock"></i> ${t.visit} ${s.dur}</div>
          <p class="desc">${S(s.desc)}</p>
          <div class="story"><span class="label"><i class="fa-solid fa-book-open"></i> ${t.story}</span><p>${S(s.story)}</p></div>
@@ -530,11 +557,12 @@ function render(lang){
   layerCtl = L.control.layers({[t.streets]:base.streets,[t.satellite]:base.sat},null,{position:"topright"}).addTo(map);
 
   /* --- itinerary cards --- */
-  document.getElementById("stops").innerHTML = STOPS.map(s=>{
+  document.getElementById("stops").innerHTML = STOPS.map((s,i)=>{
     const num = s.n==="+" ? '<i class="fa-solid fa-plus"></i>' : s.n;
     const head = s.n==="+" ? t.extra : `${t.stop} ${s.n}`;
     const parkBtn = s.parkNav ? `<a class="btn btn-park" href="${appleQ(s.parkNav)}" target="_blank" rel="noopener"><i class="fa-solid fa-square-parking"></i> ${t.park}</a>` : "";
     return `<article class="card a-${s.key}">
+      ${legHTML(lang,i)}
       <div class="card-head">
         <div class="card-stamp"><span>${num}</span></div>
         <div class="card-ht">
