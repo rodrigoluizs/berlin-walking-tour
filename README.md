@@ -1,18 +1,21 @@
-# Berlin in the Open Air — Walking Tour
+# Walking Tours
 
-A single-page, bilingual (English / Portuguese) self-driving tour of Berlin's
-open-air landmarks in the city center, ordered east to west starting from
-Lichtenberg.
+A small, growing collection of single-page, bilingual (English / Portuguese)
+self-guided open-air city walking tours. Each tour is an interactive map with a
+story per stop, walking times and one-tap Apple Maps navigation.
 
-- Interactive Leaflet map with real tiles (Esri World Street Map / Imagery).
-- One themed stamp marker per stop, with a short story, recommended visit time,
-  and a recommended parking garage.
-- Every stop has an Apple Maps driving-directions link that works on iPhone.
-- Language follows the device (`navigator.language`) and can be toggled manually.
+- `index.html` — the hub that lists the available tours.
+- `berlin/` — **Berlin in the Open Air**: the open-air heart of the city on
+  foot from a single parking at Alexanderplatz, ending at Hauptbahnhof with a
+  short train ride back to the car. 14 walking stops plus 3 optional side-trips
+  (East Side Gallery, Victory Column, Bernauer Wall Memorial).
 
-## Usage
+Language follows the device (`navigator.language`) and can be toggled manually.
 
-Open `index.html` in any browser, or visit the published GitHub Pages site.
+## Add a new tour
+
+Create a folder next to `berlin/` with its own `index.html`, then add a card to
+the `tours` list in the hub `index.html`.
 
 ## Credits
 
