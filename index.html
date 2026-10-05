@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Berlin in the Open Air — Walking Tour</title>
+<meta name="description" content="A bilingual self-driving tour of Berlin's open-air landmarks, with a story for each stop and Apple Maps navigation.">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Archivo:wght@500;600;700&display=swap">
+
+<style>
+  /* ---------- palette: "vintage atlas" ---------- */
+  :root{
+    --bg:#E6DEC9; --paper:#F3EEDD; --paper-2:#EAE1C8;
+    --ink:#2A2824; --ink-soft:#5E574A; --ink-faint:#8C8370;
+    --line:#D2C5A4; --line-soft:#E0D7BE;
+    --teal:#1F5E54; --teal-ink:#164A42;
+    --gold:#B4832A; --gold-ink:#8E6718;
+    --brick:#A9472E; --plum:#6B5572; --navy:#2C4A6E;
+    --east:#A9472E; --central:#1F5E54; --west:#B4832A; --opt:#6B5572; --home:#2C4A6E;
+    --font-display:"Cinzel",Georgia,"Times New Roman",serif;
+    --font-serif:"Spectral",Georgia,serif;
+    --font-ui:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --shadow:0 1px 2px rgba(42,40,36,.08),0 10px 28px rgba(42,40,36,.10);
+    --shadow-soft:0 1px 2px rgba(42,40,36,.07);
+    --radius:4px;
+    color-scheme:light;
+  }
+  :root:not([data-theme="light"]){ @media (prefers-color-scheme:dark){
+    --bg:#15201D; --paper:#1E2825; --paper-2:#192220;
+    --ink:#ECE3CF; --ink-soft:#BBB199; --ink-faint:#8C8370;
+    --line:#35423C; --line-soft:#283430;
+    --teal:#44998B; --teal-ink:#5FB3A4;
+    --gold:#D7A445; --gold-ink:#E3B863;
+    --brick:#D06A50; --plum:#A58AAE; --navy:#6E97C7;
+    --east:#D06A50; --central:#44998B; --west:#D7A445; --opt:#A58AAE; --home:#6E97C7;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px rgba(0,0,0,.4);
+    --shadow-soft:0 1px 2px rgba(0,0,0,.3);
+    color-scheme:dark;
+  }}
+  :root[data-theme="dark"]{
+    --bg:#15201D; --paper:#1E2825; --paper-2:#192220;
+    --ink:#ECE3CF; --ink-soft:#BBB199; --ink-faint:#8C8370;
+    --line:#35423C; --line-soft:#283430;
+    --teal:#44998B; --teal-ink:#5FB3A4;
+    --gold:#D7A445; --gold-ink:#E3B863;
+    --brick:#D06A50; --plum:#A58AAE; --navy:#6E97C7;
+    --east:#D06A50; --central:#44998B; --west:#D7A445; --opt:#A58AAE; --home:#6E97C7;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px rgba(0,0,0,.4);
+    --shadow-soft:0 1px 2px rgba(0,0,0,.3);
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background-color:var(--bg);
+    /* faint cartographic grain + gentle vignette */
+    background-image:
+      radial-gradient(60rem 40rem at 110% -10%, rgba(31,94,84,.08), transparent 60%),
+      radial-gradient(50rem 40rem at -10% 110%, rgba(180,131,42,.08), transparent 60%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.035'/></svg>");
+    color:var(--ink);
+    font-family:var(--font-serif);
+    font-size:16px;line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1040px;margin:0 auto;padding-inline:20px}
+  a{color:var(--teal-ink)}
+  .ui{font-family:var(--font-ui)}
+  .label{font-family:var(--font-ui);font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:600}
+
+  /* ---------- header ---------- */
+  header{position:relative;overflow:hidden;border-bottom:1px double var(--line)}
+  header::after{ /* compass rose watermark */
+    content:"\f14e"; font-family:"Font Awesome 6 Free"; font-weight:900;
+    position:absolute; right:-18px; top:-24px; font-size:190px; color:var(--teal);
+    opacity:.06; transform:rotate(12deg); pointer-events:none;
+  }
+  .hero{max-width:1040px;margin:0 auto;padding:30px 20px 26px;position:relative}
+  .tag{display:inline-flex;align-items:center;gap:8px;background:var(--paper);
+    border:1px solid var(--line);border-radius:2px;padding:6px 12px;color:var(--gold-ink);
+    box-shadow:var(--shadow-soft)}
+  .tag .label{color:var(--gold-ink)}
+  h1{font-family:var(--font-display);font-weight:700;letter-spacing:.02em;line-height:1.04;
+    font-size:clamp(30px,7.5vw,54px);margin:16px 0 0;text-transform:uppercase;text-wrap:balance}
+  .hero .sub{font-family:var(--font-serif);font-size:17px;color:var(--ink-soft);max-width:54ch;margin:12px 0 0}
+  .rule{height:1px;background:
+    repeating-linear-gradient(90deg,var(--line),var(--line) 6px,transparent 6px,transparent 12px);
+    margin:20px 0 0}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .chip{display:inline-flex;align-items:center;gap:8px;background:var(--paper);
+    border:1px solid var(--line);border-radius:2px;padding:6px 12px;font-family:var(--font-ui);
+    font-size:12.5px;font-weight:500;color:var(--ink-soft);box-shadow:var(--shadow-soft)}
+  .chip i{color:var(--teal);font-size:12px}
+
+  /* language toggle */
+  #langToggle{position:absolute;top:22px;right:20px;display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--font-ui);font-weight:600;font-size:12.5px;letter-spacing:.04em;cursor:pointer;
+    background:var(--teal);color:#f5efe0;border:none;border-radius:2px;padding:9px 13px;box-shadow:var(--shadow-soft)}
+  #langToggle:hover{filter:brightness(1.07)}
+  @media (prefers-color-scheme:dark){#langToggle{color:#11201d}}
+  :root[data-theme="dark"] #langToggle{color:#11201d}
+
+  /* ---------- section frame ---------- */
+  section{padding:30px 0 10px}
+  .sec-head{display:flex;align-items:flex-end;gap:12px;margin-bottom:14px}
+  .sec-head .no{font-family:var(--font-display);font-weight:600;color:var(--gold);font-size:20px}
+  h2{font-family:var(--font-display);font-weight:600;font-size:clamp(20px,4vw,26px);margin:0;letter-spacing:.01em}
+  .sec-sub{font-family:var(--font-serif);color:var(--ink-soft);font-size:15px;margin:2px 0 16px}
+
+  /* ---------- map ---------- */
+  .mapframe{position:relative;background:var(--paper);border:1px solid var(--line);
+    border-radius:var(--radius);box-shadow:var(--shadow);padding:8px}
+  .mapframe::before{content:"";position:absolute;inset:3px;border:1px solid var(--line-soft);
+    border-radius:2px;pointer-events:none;z-index:500}
+  #map{width:100%;height:66vh;min-height:400px;border-radius:2px;background:var(--paper-2)}
+  .legend{display:flex;flex-wrap:wrap;gap:12px 18px;margin:14px 4px 2px;
+    font-family:var(--font-ui);font-size:12.5px;color:var(--ink-soft)}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .dot{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:0 0 0 2px var(--paper),0 0 0 3px currentColor}
+
+  .notes{display:grid;gap:10px;margin-top:16px}
+  .note{display:flex;gap:11px;background:var(--paper);border:1px solid var(--line);
+    border-left:3px solid var(--gold);border-radius:var(--radius);padding:12px 14px;
+    font-family:var(--font-serif);font-size:14px;color:var(--ink-soft)}
+  .note i{color:var(--gold-ink);font-size:15px;margin-top:3px}
+  .note b{color:var(--ink);font-weight:600}
+
+  /* ---------- stamp markers ---------- */
+  .stamp{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+    color:#f5efe0;font-family:var(--font-display);font-weight:700;font-size:15px;
+    border:2px solid #f5efe0;box-shadow:0 0 0 1.5px currentColor,0 3px 6px rgba(0,0,0,.35);
+    transition:transform .14s ease}
+  .stamp:hover{transform:scale(1.12) rotate(-4deg)}
+  .stamp-east{background:var(--east);color:var(--east)}
+  .stamp-central{background:var(--central);color:var(--central)}
+  .stamp-west{background:var(--west);color:var(--west)}
+  .stamp-opt{background:var(--opt);color:var(--opt)}
+  .stamp span{color:#f6f1e3}
+  .stamp-home{background:var(--home);color:var(--home)}
+
+  /* ---------- popups ---------- */
+  .leaflet-popup-content-wrapper{background:var(--paper);color:var(--ink);border-radius:var(--radius);
+    box-shadow:var(--shadow);border:1px solid var(--line)}
+  .leaflet-popup-tip{background:var(--paper);border:1px solid var(--line)}
+  .leaflet-popup-content{margin:0;width:290px!important;font-family:var(--font-serif)}
+  .pop-head{display:flex;align-items:center;gap:11px;padding:13px 15px 10px;border-bottom:1px dashed var(--line)}
+  .pop-ico{width:38px;height:38px;flex:none;border-radius:50%;display:grid;place-items:center;
+    color:#f5efe0;font-size:16px;box-shadow:0 0 0 1.5px currentColor inset}
+  .pop-ico.a-east{background:var(--east)}.pop-ico.a-central{background:var(--central)}
+  .pop-ico.a-west{background:var(--west)}.pop-ico.a-opt{background:var(--opt)}
+  .pop-ht{min-width:0}
+  .pop-ht .label{color:var(--gold-ink);margin-bottom:1px}
+  .pop-ht h3{font-family:var(--font-display);font-weight:600;font-size:16px;margin:0;line-height:1.15;color:var(--ink)}
+  .pop-body{padding:11px 15px 14px}
+  .pop-dur{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-ui);font-size:12px;
+    color:var(--ink-soft);background:var(--paper-2);border:1px solid var(--line);border-radius:999px;
+    padding:3px 10px;margin-bottom:9px}
+  .pop-body p.desc{margin:0 0 9px;font-size:14px;color:var(--ink-soft)}
+  .story{position:relative;background:var(--paper-2);border:1px solid var(--line);
+    border-radius:var(--radius);padding:11px 13px 12px;margin:0 0 11px}
+  .story .label{display:flex;align-items:center;gap:7px;color:var(--gold-ink);margin-bottom:5px}
+  .story p{margin:0;font-family:var(--font-serif);font-style:italic;font-size:14px;line-height:1.55;color:var(--ink)}
+  .pop-park{display:flex;gap:8px;align-items:flex-start;font-family:var(--font-ui);font-size:12px;
+    color:var(--ink-faint);margin:0 0 11px}
+  .pop-park i{color:var(--ink-soft);margin-top:2px}
+  .btns{display:flex;flex-wrap:wrap;gap:8px}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-ui);font-weight:600;
+    font-size:13px;text-decoration:none;padding:9px 13px;border-radius:2px;border:1px solid transparent;cursor:pointer}
+  .btn-go{background:var(--teal);color:#f5efe0}
+  .btn-go:hover{filter:brightness(1.07)}
+  @media (prefers-color-scheme:dark){.btn-go{color:#11201d}}
+  :root[data-theme="dark"] .btn-go{color:#11201d}
+  .btn-park{background:transparent;border-color:var(--line);color:var(--ink-soft)}
+  .btn-park:hover{border-color:var(--ink-faint);color:var(--ink)}
+
+  /* ---------- itinerary cards ---------- */
+  .stops{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+  .card{position:relative;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:16px 16px 16px 18px}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:var(--radius) 0 0 var(--radius)}
+  .card.a-east::before{background:var(--east)}.card.a-central::before{background:var(--central)}
+  .card.a-west::before{background:var(--west)}.card.a-opt::before{background:var(--opt)}
+  .card-head{display:flex;align-items:center;gap:12px}
+  .card-stamp{width:40px;height:40px;flex:none;border-radius:50%;display:grid;place-items:center;
+    color:#f5efe0;font-family:var(--font-display);font-weight:700;font-size:16px;border:2px solid var(--paper);box-shadow:0 0 0 1.5px currentColor}
+  .card.a-east .card-stamp{background:var(--east);color:var(--east)}
+  .card.a-central .card-stamp{background:var(--central);color:var(--central)}
+  .card.a-west .card-stamp{background:var(--west);color:var(--west)}
+  .card.a-opt .card-stamp{background:var(--opt);color:var(--opt)}
+  .card-stamp span{color:#f6f1e3}
+  .card-ht{min-width:0}
+  .card-ht .label{color:var(--gold-ink)}
+  .card-ht h3{font-family:var(--font-display);font-weight:600;font-size:17px;line-height:1.15;margin:2px 0 0;color:var(--ink)}
+  .card-ht h3 i{color:var(--teal);font-size:14px;margin-right:6px}
+  .card .dur{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-ui);font-size:11.5px;
+    color:var(--ink-soft);background:var(--paper-2);border:1px solid var(--line);border-radius:999px;padding:2px 9px;margin:11px 0 0}
+  .card p.desc{margin:9px 0 0;font-size:14px;color:var(--ink-soft)}
+  .card .story{margin-top:11px}
+  .card .park{display:flex;gap:7px;align-items:flex-start;font-family:var(--font-ui);font-size:12px;color:var(--ink-faint);margin-top:10px}
+  .card .park i{color:var(--ink-soft);margin-top:2px}
+  .card .btns{margin-top:12px}
+
+  footer{border-top:1px double var(--line);margin-top:28px}
+  .foot{max-width:1040px;margin:0 auto;padding:22px 20px 40px;font-family:var(--font-ui);font-size:12.5px;color:var(--ink-faint)}
+  .foot .cr{display:flex;align-items:center;gap:8px}
+  .foot i{color:var(--gold)}
+
+  @media (max-width:560px){
+    .stops{grid-template-columns:1fr}
+    .btn{flex:1 1 auto;justify-content:center}
+    header::after{font-size:130px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hero">
+    <button id="langToggle" class="ui" type="button"><i class="fa-solid fa-earth-europe"></i><span id="langToggleLbl">PT</span></button>
+    <span class="tag"><i class="fa-solid fa-compass" style="color:var(--gold-ink)"></i><span class="label" id="eyebrow"></span></span>
+    <h1 id="title"></h1>
+    <p class="sub" id="subtitle"></p>
+    <div class="rule"></div>
+    <div class="chips" id="chips"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section>
+    <div class="sec-head"><span class="no">I</span><h2 id="secMapTitle"></h2></div>
+    <p class="sec-sub" id="secMapSub"></p>
+    <div class="mapframe">
+      <div id="map"></div>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="notes" id="notes"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="no">II</span><h2 id="secListTitle"></h2></div>
+    <p class="sec-sub" id="secListSub"></p>
+    <div class="stops" id="stops"></div>
+  </section>
+</main>
+
+<footer>
+  <div class="foot">
+    <span class="cr"><i class="fa-solid fa-map-location-dot"></i><span id="footText"></span></span>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+"use strict";
+
+/* ===== interface strings ===== */
+const T = {
+  en:{
+    htmlLang:"en",
+    docTitle:"Berlin in the Open Air — Walking Tour",
+    eyebrow:"Self-driving tour · from Lichtenberg",
+    title:"Berlin in the Open Air",
+    subtitle:"Every open-air landmark in the heart of the city, in order from east to west starting in Lichtenberg. Begin at the East Side Gallery (near home, easy parking) and finish in the west. Tap a pin for the stop, its little story, and <b>driving directions in Apple Maps</b>.",
+    chips:[["fa-location-dot","13 stops + 1 extra"],["fa-cloud-sun","100% open air"],["fa-flag-checkered","Start: East Side Gallery"]],
+    legend:[["home","Start (Lichtenberg)"],["east","East / start"],["central","Central Mitte"],["west","West / finish"],["opt","Optional extra"]],
+    notes:[
+      ["fa-car","<b>Driving in Berlin:</b> the center is a Low-Emission Zone and needs the green sticker (Umweltplakette) on the windscreen. Rental cars already have it."],
+      ["fa-route","The dashed line shows the order of the route, not the exact streets. The real turn-by-turn route for each leg opens in Apple Maps when you tap <b>Navigate</b>."]
+    ],
+    secMapTitle:"The route",
+    secMapSub:"A schematic overview, not street scale. Tap any stop for details and directions.",
+    secListTitle:"The stops, in order",
+    secListSub:"The same stops as the map pins, with a story for each one.",
+    foot:"Open-air Berlin, told as a little journey. Built for Mom.",
+    stop:"Stop", extra:"Extra", visit:"Visit", story:"The story",
+    navigate:"Navigate", park:"Park", startPoint:"Starting point",
+    homeName:"Lichtenberg (start)",
+    homeDesc:"You set off from here. The East Side Gallery (stop 1) is just to the west.",
+    streets:"Streets", satellite:"Satellite", toggleTo:"PT"
+  },
+  pt:{
+    htmlLang:"pt-BR",
+    docTitle:"Berlim a Céu Aberto — Passeio Guiado",
+    eyebrow:"Passeio de carro · saindo de Lichtenberg",
+    title:"Berlim a Céu Aberto",
+    subtitle:"Todos os marcos ao ar livre do coração da cidade, em ordem de leste a oeste saindo de Lichtenberg. Comece pela East Side Gallery (perto de casa, com estacionamento fácil) e feche no oeste. Toque num pino para ver a parada, a historinha dela e a <b>navegação de carro no Apple Maps</b>.",
+    chips:[["fa-location-dot","13 paradas + 1 extra"],["fa-cloud-sun","100% ao ar livre"],["fa-flag-checkered","Início: East Side Gallery"]],
+    legend:[["home","Saída (Lichtenberg)"],["east","Leste / início"],["central","Mitte central"],["west","Oeste / final"],["opt","Extra opcional"]],
+    notes:[
+      ["fa-car","<b>Carro em Berlim:</b> o centro é Zona Ambiental e exige o adesivo verde (Umweltplakette) no para-brisa. Carros alugados já vêm com ele."],
+      ["fa-route","A linha tracejada mostra a ordem do roteiro, não as ruas exatas. A rota real de cada trecho abre no Apple Maps quando você toca em <b>Navegar</b>."]
+    ],
+    secMapTitle:"O roteiro",
+    secMapSub:"Visão geral esquemática, não em escala de ruas. Toque em qualquer parada para detalhes e navegação.",
+    secListTitle:"As paradas, em ordem",
+    secListSub:"As mesmas paradas dos pinos do mapa, com uma historinha em cada uma.",
+    foot:"Berlim a céu aberto, contada como uma viagenzinha. Feito pra mãe.",
+    stop:"Parada", extra:"Extra", visit:"Visita", story:"A historinha",
+    navigate:"Navegar", park:"Estacionar", startPoint:"Ponto de partida",
+    homeName:"Lichtenberg (saída)",
+    homeDesc:"Você sai daqui. A East Side Gallery (parada 1) fica logo a oeste.",
+    streets:"Ruas", satellite:"Satélite", toggleTo:"EN"
+  }
+};
+
+/* ===== data (code in English, content bilingual) ===== */
+const HOME = {lat:52.5126, lng:13.4968};
+const STOPS = [
+  {n:1, key:"east", icon:"fa-palette", lat:52.5050, lng:13.4399, dur:"45–60 min",
+   parkNav:"Parkhaus East Side Mall, Berlin",
+   name:{en:"East Side Gallery", pt:"East Side Gallery"},
+   area:{en:"Friedrichshain", pt:"Friedrichshain"},
+   desc:{en:"The longest preserved stretch of the Wall: 1.3 km of open-air art along the river. A perfect start coming from Lichtenberg.",
+         pt:"O maior trecho preservado do Muro: 1,3 km de arte a céu aberto à beira do rio. Começo perfeito saindo de Lichtenberg."},
+   park:{en:"Street parking or the East Side Mall garage.", pt:"Vagas na rua ou garagem da East Side Mall."},
+   story:{en:"For 28 years a wall cut Berlin in half, and families were separated with no way to visit each other. Grandmothers waved to their grandchildren from the other side. When the wall fell in 1989, the whole city cried and danced on top of it. Later, artists from all over came to paint this surviving stretch so no one would forget. Look for the kiss between the two politicians, it became the most famous painting here.",
+          pt:"Durante 28 anos um muro cortou Berlim no meio, e famílias ficaram separadas sem poder se visitar. Avós acenavam de longe para os netos do outro lado. Quando o muro caiu, em 1989, a cidade inteira chorou e dançou em cima dele. Depois, artistas do mundo todo vieram pintar este pedaço que sobrou, pra ninguém esquecer. Procure o beijo entre os dois políticos, virou a pintura mais famosa daqui."}},
+
+  {n:2, key:"central", icon:"fa-tower-observation", lat:52.5215, lng:13.4105, dur:"20–30 min",
+   parkNav:"Parkhaus Alexa, Berlin",
+   name:{en:"Alexanderplatz & TV Tower", pt:"Alexanderplatz & Torre de TV"},
+   area:{en:"Central Mitte", pt:"Mitte central"},
+   desc:{en:"A big square with the World Clock and the TV Tower rising above. Seeing it from below is free and open-air.",
+         pt:"Praça grande com o Relógio Mundial e a Torre de TV despontando. Ver de baixo é grátis e ao ar livre."},
+   park:{en:"Alexa garage, next to the square.", pt:"Garagem Alexa, ao lado da praça."},
+   story:{en:"This tower was the pride of former communist Germany, which wanted to show the world it was modern and powerful. But something funny happened: when the sun hits the glass ball up top, the shape of a cross appears. The government was against religion and was furious, but there was no way to remove it. People nicknamed it 'the Pope's Revenge'. And the big clock on the square was where sweethearts arranged to meet.",
+          pt:"Esta torre foi o orgulho da antiga Alemanha comunista, que queria mostrar ao mundo que era moderna e poderosa. Mas aconteceu uma coisa curiosa: quando o sol bate na bola de vidro lá no alto, aparece o desenho de uma cruz. O governo era contra a religião e ficou furioso, mas não teve jeito de tirar. O povo apelidou de 'a vingança do Papa'. E o relógio grande da praça era o ponto onde os namorados marcavam encontro."}},
+
+  {n:3, key:"central", icon:"fa-landmark", lat:52.5188, lng:13.4083, dur:"15 min",
+   parkNav:"Parkhaus DomAquarée, Berlin",
+   name:{en:"Rotes Rathaus (Red City Hall)", pt:"Rotes Rathaus (Prefeitura Vermelha)"},
+   area:{en:"Central Mitte", pt:"Mitte central"},
+   desc:{en:"The red-brick facade of the city hall, with the Neptune Fountain out front and the Marienkirche beside it. All from outside.",
+         pt:"A fachada de tijolos vermelhos da prefeitura, com a fonte de Netuno na frente e a Marienkirche ao lado. Tudo por fora."},
+   park:{en:"DomAquarée garage, a short walk away.", pt:"Garagem DomAquarée, a poucos passos."},
+   story:{en:"This is where the mayor of Berlin works, but the name 'red' isn't about politics, it's just the color of the bricks. Out front there's a lovely fountain with Neptune, god of the sea, surrounded by four women who stand for Germany's rivers. They say tossing a coin in the water brings luck.",
+          pt:"É aqui que trabalha o prefeito de Berlim, mas o nome 'vermelho' não é de política, é só da cor dos tijolos. Na frente tem uma fonte linda com o deus do mar, Netuno, rodeado de quatro moças que representam os rios da Alemanha. Dizem que jogar uma moedinha na água dá sorte."}},
+
+  {n:4, key:"central", icon:"fa-house-chimney", lat:52.5160, lng:13.4068, dur:"30–40 min",
+   parkNav:"Parkhaus DomAquarée, Berlin",
+   name:{en:"Nikolai Quarter (Nikolaiviertel)", pt:"Bairro Nikolai (Nikolaiviertel)"},
+   area:{en:"Central Mitte", pt:"Mitte central"},
+   desc:{en:"Berlin's oldest quarter: cobbled lanes, the Nikolaikirche from outside, and cafes by the river.",
+         pt:"O bairro mais antigo de Berlim: ruelas de pedra, a Nikolaikirche por fora e cafés à beira do rio."},
+   park:{en:"DomAquarée garage, a short walk away.", pt:"Garagem DomAquarée, a poucos passos."},
+   story:{en:"This is the oldest little corner of Berlin, almost 800 years old, from when the city was just a small village. The cobbled lanes and little houses look like a fairy tale. The war destroyed it all, but they rebuilt it brick by brick to keep the memory alive. It's the perfect place to sit, have a coffee and rest your legs.",
+          pt:"Este é o cantinho mais antigo de Berlim, tem quase 800 anos, de quando a cidade era só uma vilazinha. As ruelas de pedra e as casinhas parecem de conto de fadas. A guerra destruiu tudo, mas reconstruíram tijolo por tijolo pra guardar a memória. É o lugar perfeito pra sentar, tomar um café e descansar as pernas."}},
+
+  {n:5, key:"central", icon:"fa-church", lat:52.5186, lng:13.3989, dur:"30–45 min",
+   parkNav:"Parkhaus DomAquarée, Berlin",
+   name:{en:"Museum Island & Berlin Cathedral", pt:"Ilha dos Museus & Berliner Dom"},
+   area:{en:"Central Mitte", pt:"Mitte central"},
+   desc:{en:"The cathedral, the Lustgarten park and the Humboldt Forum by the Spree, all enjoyed from outside.",
+         pt:"A catedral, o jardim Lustgarten e o Humboldt Forum à beira do Spree, tudo apreciado por fora."},
+   park:{en:"DomAquarée garage (Karl-Liebknecht-Str.).", pt:"Garagem DomAquarée (Karl-Liebknecht-Str.)."},
+   story:{en:"This huge cathedral was the church of the German royal family, the kings and emperors. Down below it rest the coffins of nearly a hundred members of royalty. Outside flows the river Spree, and you can sit in the garden just watching the little boats go by. It was the fanciest part of old Berlin.",
+          pt:"Esta catedral enorme era a igreja da família real alemã, dos reis e imperadores. Lá embaixo dela estão guardados os caixões de quase cem pessoas da realeza. Do lado de fora corre o rio Spree, e dá pra sentar no jardim só olhando os barquinhos passarem. Era o pedaço mais chique da velha Berlim."}},
+
+  {n:6, key:"central", icon:"fa-book", lat:52.5168, lng:13.3947, dur:"15–20 min",
+   parkNav:"Parkhaus Bebelplatz, Berlin",
+   name:{en:"Bebelplatz & Unter den Linden", pt:"Bebelplatz & Unter den Linden"},
+   area:{en:"Central Mitte", pt:"Mitte central"},
+   desc:{en:"The grand avenue and the square with the book-burning memorial (a glass plate set in the ground).",
+         pt:"A avenida nobre e a praça com o memorial da queima de livros (uma placa de vidro no chão)."},
+   park:{en:"Underground garage at Bebelplatz.", pt:"Estacionamento subterrâneo da Bebelplatz."},
+   story:{en:"This wide, tree-lined avenue was always the city's grandest. But something sad happened on this square: in 1933 the Nazis burned thousands of books in a bonfire here. Today a small glass window in the ground shows empty shelves, in memory. A writer had warned long before: 'where they burn books, they will in the end burn people'.",
+          pt:"Esta avenida larga, cheia de árvores, sempre foi a mais nobre da cidade. Mas nesta praça aconteceu uma tristeza: em 1933 os nazistas queimaram milhares de livros numa fogueira. Hoje tem uma janelinha de vidro no chão que mostra estantes vazias, em memória. Um escritor já tinha avisado: 'onde se queimam livros, um dia se queimam pessoas'."}},
+
+  {n:7, key:"central", icon:"fa-building-columns", lat:52.5138, lng:13.3926, dur:"20 min",
+   parkNav:"Q-Park Gendarmenmarkt, Berlin",
+   name:{en:"Gendarmenmarkt", pt:"Gendarmenmarkt"},
+   area:{en:"Central Mitte", pt:"Mitte central"},
+   desc:{en:"One of Europe's most beautiful squares: the concert hall and two twin cathedrals seen from outside.",
+         pt:"Uma das praças mais bonitas da Europa: a sala de concertos e duas catedrais gêmeas vistas por fora."},
+   park:{en:"Q-Park Gendarmenmarkt (Markgrafenstraße).", pt:"Q-Park Gendarmenmarkt (Markgrafenstraße)."},
+   story:{en:"Many say this is the most beautiful square in Europe, with two twin churches, one on each side. One of them was built by French people who fled France because they were persecuted for their religion and found shelter here in Berlin. At Christmas the square turns into a market full of lights and the smell of mulled wine.",
+          pt:"Muita gente diz que esta é a praça mais bonita da Europa, com duas igrejas gêmeas, uma de cada lado. Uma delas foi construída por franceses que fugiram da França porque eram perseguidos pela sua religião e encontraram abrigo aqui em Berlim. No Natal, a praça vira um mercadinho cheio de luzes e cheiro de vinho quente."}},
+
+  {n:8, key:"central", icon:"fa-passport", lat:52.5075, lng:13.3904, dur:"10–15 min",
+   parkNav:"Parkhaus Mauerstraße, Berlin",
+   name:{en:"Checkpoint Charlie", pt:"Checkpoint Charlie"},
+   area:{en:"Central Mitte", pt:"Mitte central"},
+   desc:{en:"The old crossing between the two sides of the divided city, with the replica guard booth and street signs. A quick stop.",
+         pt:"A antiga passagem entre os dois lados da cidade dividida, com a guarita-réplica e placas na rua. Parada rápida."},
+   park:{en:"Parkhaus Mauerstraße, near the corner.", pt:"Parkhaus Mauerstraße, perto da esquina."},
+   story:{en:"This was the most famous crossing between the two sides of the divided city, guarded by soldiers day and night. Many risked their lives to escape to the free side: some hid in car trunks, some dug tunnels underground. Some stories ended well, others didn't. The sign is still there: 'You are leaving the American sector'.",
+          pt:"Aqui era a passagem mais famosa entre os dois lados da cidade dividida, vigiada por soldados dia e noite. Muita gente arriscou a vida pra fugir pro lado livre: teve quem se escondesse no porta-malas do carro, quem cavasse túneis por baixo da terra. Umas histórias terminaram bem, outras não. Até hoje tem a placa avisando 'você está saindo do setor americano'."}},
+
+  {n:9, key:"west", icon:"fa-city", lat:52.5096, lng:13.3759, dur:"20–30 min",
+   parkNav:"Parkhaus Potsdamer Platz Arkaden, Berlin",
+   name:{en:"Potsdamer Platz", pt:"Potsdamer Platz"},
+   area:{en:"West Mitte", pt:"Mitte oeste"},
+   desc:{en:"A modern square with the Sony Center roof and original pieces of the Wall on the pavement. A good base with parking and cafes.",
+         pt:"Praça moderna com o teto do Sony Center e pedaços originais do Muro na calçada. Boa base com garagem e cafés."},
+   park:{en:"Potsdamer Platz underground garage.", pt:"Garagem subterrânea de Potsdamer Platz."},
+   story:{en:"It may be hard to believe, but this place full of modern buildings was once an empty wasteland, no man's land, right on the line of the wall. No one was allowed to set foot here. After everything fell, it was among the first to be rebuilt, and today it's one of the most modern corners. A few pieces of the wall still stand on the pavement, as a reminder.",
+          pt:"Pode parecer mentira, mas este lugar cheio de prédios modernos já foi um descampado vazio, terra de ninguém, bem em cima da linha do muro. Ninguém podia pisar aqui. Depois que tudo caiu, foi dos primeiros a ser reconstruído, e hoje é um dos cantos mais modernos. Ainda tem uns pedaços do muro em pé na calçada, pra lembrar."}},
+
+  {n:10, key:"west", icon:"fa-star-of-david", lat:52.5139, lng:13.3785, dur:"20–30 min",
+   parkNav:"Q-Park Brandenburger Tor, Berlin",
+   name:{en:"Holocaust Memorial", pt:"Memorial do Holocausto"},
+   area:{en:"West Mitte", pt:"Mitte oeste"},
+   desc:{en:"The 2,711 concrete steles you walk through, open-air and free. Quiet and moving.",
+         pt:"As 2.711 estelas de concreto que se atravessa a pé, ao ar livre e de graça. Silencioso e marcante."},
+   park:{en:"Q-Park Brandenburger Tor, a short walk away.", pt:"Q-Park Brandenburger Tor, a poucos passos."},
+   story:{en:"There are almost three thousand grey concrete blocks of different sizes that you walk through. As you go in, the ground dips and the blocks rise taller than you, giving a maze-like feeling of being lost. It was made that way on purpose, in memory of the Jews killed in the war. It is a place of silence and respect.",
+          pt:"São quase três mil blocos de concreto cinza, de tamanhos diferentes, que você atravessa a pé. Conforme entra, o chão desce e os blocos ficam mais altos que a gente, e dá uma sensação de labirinto, de se perder. Foi feito assim de propósito, em memória dos judeus mortos na guerra. É um lugar de silêncio e respeito."}},
+
+  {n:11, key:"west", icon:"fa-archway", lat:52.5163, lng:13.3777, dur:"15–20 min",
+   parkNav:"Q-Park Brandenburger Tor, Berlin",
+   name:{en:"Brandenburg Gate", pt:"Portão de Brandemburgo"},
+   area:{en:"West Mitte", pt:"Mitte oeste"},
+   desc:{en:"Berlin's postcard, on Pariser Platz (pedestrians only). A fully open square.",
+         pt:"O cartão-postal de Berlim, na Pariser Platz (só pedestres). Praça totalmente aberta."},
+   park:{en:"Q-Park Brandenburger Tor (Behrenstraße).", pt:"Q-Park Brandenburger Tor (Behrenstraße)."},
+   story:{en:"This is the symbol of Berlin, with the horse-drawn chariot up on top. Napoleon, the French emperor, once stole that chariot and took it to Paris, but the Germans went and brought it back. During the division, the wall ran right in front of it and no one could get close. When the wall fell, this is where people hugged and celebrated. It's the photo you can't skip.",
+          pt:"Este é o símbolo de Berlim, com a carruagem puxada por cavalos lá em cima. Napoleão, o imperador francês, uma vez roubou essa carruagem e levou pra Paris, mas os alemães foram lá e trouxeram de volta. Durante a divisão, o muro passava bem na frente e ninguém podia chegar perto. Quando o muro caiu, foi aqui que o povo se abraçou comemorando. É a foto que não pode faltar."}},
+
+  {n:12, key:"west", icon:"fa-landmark-dome", lat:52.5186, lng:13.3762, dur:"15 min",
+   parkNav:"Q-Park Brandenburger Tor, Berlin",
+   name:{en:"Reichstag (Parliament)", pt:"Reichstag (Parlamento)"},
+   area:{en:"West Mitte", pt:"Mitte oeste"},
+   desc:{en:"The historic building with the glass dome, steps from the Gate. The exterior and lawn are open.",
+         pt:"O prédio histórico com a cúpula de vidro, a poucos passos do Portão. Exterior e gramado abertos."},
+   park:{en:"Same garage as the Gate (Q-Park Brandenburger Tor).", pt:"Mesma garagem do Portão (Q-Park Brandenburger Tor)."},
+   story:{en:"This is the building where politicians make the country's laws, their 'congress'. On top there's a dome made entirely of glass, and that has a beautiful reason: it is to show that the people can 'see' what the politicians are doing inside, no secrets. There was a time when an artist wrapped the whole building in silvery fabric, and it became the city's attraction.",
+          pt:"Este é o prédio onde os políticos fazem as leis do país, o 'congresso' deles. Em cima tem uma cúpula toda de vidro, e isso tem um motivo bonito: é pra mostrar que o povo pode 'ver' o que os políticos fazem lá dentro, nada de segredo. Teve uma época em que um artista embrulhou o prédio inteiro num pano prateado, e virou a atração da cidade."}},
+
+  {n:13, key:"west", icon:"fa-monument", lat:52.5145, lng:13.3501, dur:"15–20 min",
+   name:{en:"Victory Column (Siegessäule)", pt:"Coluna da Vitória (Siegessäule)"},
+   area:{en:"Tiergarten", pt:"Tiergarten"},
+   desc:{en:"The golden angel in the middle of the Tiergarten, on a large roundabout. Gorgeous at sunset. The finale of the tour.",
+         pt:"O anjo dourado no meio do Tiergarten, numa grande rotatória. Belíssimo no fim de tarde. Final do passeio."},
+   park:{en:"Street parking on Straße des 17. Juni.", pt:"Vagas na rua, na Straße des 17. Juni."},
+   story:{en:"At the top of this column stands a golden angel that Berliners fondly call 'Goldelse', something like 'Golden Elsa'. She shines from afar and looks beautiful in the late afternoon, with the sun on her. She stands in the middle of a huge park, the city's green lung, where families picnic on Sundays.",
+          pt:"No alto desta coluna tem um anjo dourado que os berlinenses chamam com carinho de 'Goldelse', algo como 'Elsa dourada'. Ela brilha de longe e fica linda no fim da tarde, com o sol batendo. Está no meio de um parque enorme, o pulmão verde da cidade, onde as famílias fazem piquenique no domingo."}},
+
+  {n:"+", key:"opt", icon:"fa-person-through-window", lat:52.5352, lng:13.3903, dur:"30–45 min",
+   name:{en:"Wall Memorial (Bernauer Str.)", pt:"Memorial do Muro (Bernauer Str.)"},
+   area:{en:"Optional · north", pt:"Opcional · norte"},
+   desc:{en:"If you still have energy: an original stretch of the Wall in the open, with a watchtower and panels. Informative and quiet.",
+         pt:"Se sobrar fôlego: uma faixa original do Muro ao ar livre, com torre de vigia e painéis. Didático e tranquilo."},
+   park:{en:"Street parking along Bernauer Straße.", pt:"Vagas na rua ao longo da Bernauer Straße."},
+   story:{en:"This is the street where the most desperate escapes happened. The windows of the buildings faced the free side, so at first people jumped from the windows to flee, until the soldiers bricked everything up. Today a stretch of the original wall still stands, with the 'death strip' just as it was, so we never forget.",
+          pt:"Foi nesta rua que aconteceram as fugas mais desesperadas. As janelas dos prédios davam pro lado livre, então no começo as pessoas pulavam das janelas pra escapar, até os soldados fecharem tudo com tijolos. Hoje ficou um pedaço do muro original em pé, com a 'faixa da morte' do jeitinho que era, pra gente nunca esquecer."}}
+];
+
+/* ===== helpers ===== */
+const appleNav  = (lat,lng) => `https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`;
+const appleQ    = q => `https://maps.apple.com/?daddr=${encodeURIComponent(q)}&dirflg=d`;
+const esc = s => s;
+
+/* ===== map (built once) ===== */
+const map = L.map("map",{scrollWheelZoom:true});
+const base = {
+  streets:L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Tiles &copy; Esri"}),
+  sat:L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Tiles &copy; Esri"})
+};
+base.streets.addTo(map);
+L.polyline(STOPS.filter(s=>s.key!=="opt").map(s=>[s.lat,s.lng]),
+  {color:"#A9472E",weight:3,opacity:.65,dashArray:"2 9",lineCap:"round"}).addTo(map);
+const markers = L.layerGroup().addTo(map);
+let layerCtl = null;
+let fitted = false;
+
+/* ===== render for a given language ===== */
+function render(lang){
+  const t = T[lang];
+  const S = s => s[lang];
+
+  document.documentElement.lang = t.htmlLang;
+  document.title = t.docTitle;
+  document.getElementById("eyebrow").textContent = t.eyebrow;
+  document.getElementById("title").textContent = t.title;
+  document.getElementById("subtitle").innerHTML = t.subtitle;
+  document.getElementById("secMapTitle").textContent = t.secMapTitle;
+  document.getElementById("secMapSub").textContent = t.secMapSub;
+  document.getElementById("secListTitle").textContent = t.secListTitle;
+  document.getElementById("secListSub").textContent = t.secListSub;
+  document.getElementById("footText").textContent = t.foot;
+  document.getElementById("langToggleLbl").textContent = t.toggleTo;
+
+  document.getElementById("chips").innerHTML = t.chips
+    .map(([ic,txt])=>`<span class="chip"><i class="fa-solid ${ic}"></i>${txt}</span>`).join("");
+  document.getElementById("legend").innerHTML = t.legend
+    .map(([k,txt])=>`<span style="color:var(--${k})"><i class="dot"></i><span style="color:var(--ink-soft)">${txt}</span></span>`).join("");
+  document.getElementById("notes").innerHTML = t.notes
+    .map(([ic,html])=>`<div class="note"><i class="fa-solid ${ic}"></i><div>${html}</div></div>`).join("");
+
+  /* --- map markers --- */
+  markers.clearLayers();
+  const bounds = [[HOME.lat,HOME.lng]];
+  L.marker([HOME.lat,HOME.lng],{icon:L.divIcon({className:"",html:'<div class="stamp stamp-home"><i class="fa-solid fa-house"></i></div>',iconSize:[38,38],iconAnchor:[19,19],popupAnchor:[0,-18]})})
+   .bindPopup(`<div class="pop-head"><div class="pop-ico a-opt" style="background:var(--home)"><i class="fa-solid fa-house"></i></div>
+      <div class="pop-ht"><div class="label">${t.startPoint}</div><h3>${t.homeName}</h3></div></div>
+      <div class="pop-body"><p class="desc">${t.homeDesc}</p></div>`,{maxWidth:300})
+   .addTo(markers);
+
+  STOPS.forEach(s=>{
+    const num = s.n==="+" ? '<i class="fa-solid fa-plus"></i>' : s.n;
+    const icon = L.divIcon({className:"",html:`<div class="stamp stamp-${s.key}"><span>${num}</span></div>`,iconSize:[38,38],iconAnchor:[19,19],popupAnchor:[0,-18]});
+    const parkBtn = s.parkNav ? `<a class="btn btn-park" href="${appleQ(s.parkNav)}" target="_blank" rel="noopener"><i class="fa-solid fa-square-parking"></i> ${t.park}</a>` : "";
+    const head = s.n==="+" ? t.extra : `${t.stop} ${s.n}`;
+    L.marker([s.lat,s.lng],{icon}).bindPopup(
+      `<div class="pop-head"><div class="pop-ico a-${s.key}"><i class="fa-solid ${s.icon}"></i></div>
+         <div class="pop-ht"><div class="label">${head} · ${S(s.area)}</div><h3>${S(s.name)}</h3></div></div>
+       <div class="pop-body">
+         <div class="pop-dur"><i class="fa-regular fa-clock"></i> ${t.visit} ${s.dur}</div>
+         <p class="desc">${S(s.desc)}</p>
+         <div class="story"><span class="label"><i class="fa-solid fa-book-open"></i> ${t.story}</span><p>${S(s.story)}</p></div>
+         <div class="pop-park"><i class="fa-solid fa-square-parking"></i> ${S(s.park)}</div>
+         <div class="btns">
+           <a class="btn btn-go" href="${appleNav(s.lat,s.lng)}" target="_blank" rel="noopener"><i class="fa-solid fa-diamond-turn-right"></i> ${t.navigate}</a>
+           ${parkBtn}
+         </div>
+       </div>`,{maxWidth:300}).addTo(markers);
+    bounds.push([s.lat,s.lng]);
+  });
+  if(!fitted){ map.fitBounds(bounds,{padding:[40,40]}); fitted = true; }
+
+  /* --- layer control --- */
+  if(layerCtl) map.removeControl(layerCtl);
+  layerCtl = L.control.layers({[t.streets]:base.streets,[t.satellite]:base.sat},null,{position:"topright"}).addTo(map);
+
+  /* --- itinerary cards --- */
+  document.getElementById("stops").innerHTML = STOPS.map(s=>{
+    const num = s.n==="+" ? '<i class="fa-solid fa-plus"></i>' : s.n;
+    const head = s.n==="+" ? t.extra : `${t.stop} ${s.n}`;
+    const parkBtn = s.parkNav ? `<a class="btn btn-park" href="${appleQ(s.parkNav)}" target="_blank" rel="noopener"><i class="fa-solid fa-square-parking"></i> ${t.park}</a>` : "";
+    return `<article class="card a-${s.key}">
+      <div class="card-head">
+        <div class="card-stamp"><span>${num}</span></div>
+        <div class="card-ht">
+          <div class="label">${head} · ${S(s.area)}</div>
+          <h3><i class="fa-solid ${s.icon}"></i>${S(s.name)}</h3>
+        </div>
+      </div>
+      <div class="dur"><i class="fa-regular fa-clock"></i> ${t.visit} ${s.dur}</div>
+      <p class="desc">${S(s.desc)}</p>
+      <div class="story"><span class="label"><i class="fa-solid fa-book-open"></i> ${t.story}</span><p>${S(s.story)}</p></div>
+      <div class="park"><i class="fa-solid fa-square-parking"></i> ${S(s.park)}</div>
+      <div class="btns">
+        <a class="btn btn-go" href="${appleNav(s.lat,s.lng)}" target="_blank" rel="noopener"><i class="fa-solid fa-diamond-turn-right"></i> ${t.navigate}</a>
+        ${parkBtn}
+      </div>
+    </article>`;
+  }).join("");
+}
+
+/* ===== language selection ===== */
+function detectLang(){
+  try{ const saved = localStorage.getItem("bwt_lang"); if(saved==="en"||saved==="pt") return saved; }catch(e){}
+  const nav = (navigator.languages && navigator.languages[0]) || navigator.language || "en";
+  return nav.toLowerCase().startsWith("pt") ? "pt" : "en";
+}
+let lang = detectLang();
+render(lang);
+
+document.getElementById("langToggle").addEventListener("click",()=>{
+  lang = (lang==="en") ? "pt" : "en";
+  try{ localStorage.setItem("bwt_lang",lang); }catch(e){}
+  render(lang);
+});
+</script>
+</body>
+</html>
